@@ -1,16 +1,29 @@
 module LCD
-  module SegmentPrinter
-    def initialize(opts = {})
-      @segments = Array(opts[:segments])
+
+  module Printable
+    def print_char(c)
+      print c
     end
 
-    def print_segments(glyphs, opts)
+    def print_off
+      print_char off
+    end
+
+    def on() '-'; end
+    def off() ' '; end
+  end
+
+  module SegmentPrinter
+    include Printable
+
+    def initialize(opts = {})
+      @segments = Array(opts[:segments])
     end
 
     protected
     attr_reader :segments
 
-    def print_glyphs(glyphs)
+    def print_line(glyphs)
       glyphs.each do |g|
         yield g
         print_off
@@ -18,29 +31,22 @@ module LCD
       puts
     end
 
-    def print_glyph(s, g)
-      g.enabled_for_segment?(s) ? print_on : print_off
+    def print_char_for_glyph_segment(s, g)
+      print_char char_for_glyph_segment(s, g)
     end
 
-    def print_on
-      print on
+    def char_for_glyph_segment(s, g)
+      g.enabled_for_segment?(s) ? on : off
     end
-
-    def print_off
-      print off
-    end
-
-    def on() '-'; end
-    def off() ' '; end
   end
 
   class HorizontalSegmentPrinter
     include SegmentPrinter
 
     def print_segments(glyphs, opts)
-      print_glyphs(glyphs) do |g|
+      print_line(glyphs) do |g|
         print_off        
-        opts[:size].times { print_glyph(segments.first, g) }
+        opts[:size].times { print_char_for_glyph_segment(segments.first, g) }
         print_off
       end
     end
@@ -51,16 +57,16 @@ module LCD
 
     def print_segments(glyphs, opts)
       opts[:size].times do
-        print_glyphs(glyphs) {|g| print_active_segments_for_glyph(g, opts) }
+        print_line(glyphs) {|g| print_segments_for_glyph(g, opts) }
       end
     end
 
     private
 
-    def print_active_segments_for_glyph(g, opts)
-      print_glyph(segments.first, g)
+    def print_segments_for_glyph(g, opts)
+      print_char_for_glyph_segment(segments.first, g)
       opts[:size].times { print_off }
-      print_glyph(segments.last, g)
+      print_char_for_glyph_segment(segments.last, g)
     end
 
     def on() '|'; end
